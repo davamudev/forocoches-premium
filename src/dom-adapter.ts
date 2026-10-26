@@ -26,6 +26,10 @@ function detectTheme(): Theme {
   if (document.querySelector('div.threads-list, div.postbit_wrapper')) return 'mobile-v2';
   // desktop-v1 showthread (vBulletin post table, no threadlist)
   if (document.querySelector('table[id^="post"]')) return 'desktop-v1';
+  // Other pages (member.php, profile.php): generic layout markers
+  const isMobileLayout = !!document.querySelector('.page-margin');
+  if (document.querySelector('.user-notifications-count-wrapper')) return isMobileLayout ? 'mobile-v2' : 'desktop-v2';
+  if (document.querySelector('.tborder') && !isMobileLayout) return 'desktop-v1';
   // mobile-v1 fallback
   return 'mobile-v1';
 }
