@@ -112,8 +112,24 @@ function matchHighlightWordGroups(title: string, groups: HighlightGroup[]): { co
 }
 
 let lastHiddenCount = -1;
+let lastSummaryKey = '';
+
+// Undo previous hiding so every run recomputes from the current users/words
+function restoreHidden(): void {
+  document.querySelectorAll<HTMLElement>('[data-fcp-hidden]').forEach((el) => {
+    el.style.display = '';
+    delete el.dataset.fcpHidden;
+  });
+}
+
+function markHidden(el: HTMLElement | null | undefined): void {
+  if (!el) return;
+  el.style.display = 'none';
+  el.dataset.fcpHidden = '1';
+}
 
 export function hideThreads(users: string[], words: string[]): void {
+  restoreHidden();
   const threads = findThreads();
   if (threads.length === 0) { toast('No se encontraron hilos'); return; }
 
@@ -194,10 +210,9 @@ export function hideThreads(users: string[], words: string[]): void {
 
   // Apply hiding
   hidden.forEach((item) => {
-    if (item.container) item.container.style.display = 'none';
-    if (item.extraContainer) item.extraContainer.style.display = 'none';
-    const sep = detectAdapter().getSeparator(item.container!);
-    if (sep) sep.style.display = 'none';
+    markHidden(item.container);
+    markHidden(item.extraContainer);
+    if (item.container) markHidden(ad.getSeparator(item.container));
   });
 
   // Apply user/word highlights in place
@@ -219,12 +234,15 @@ export function hideThreads(users: string[], words: string[]): void {
     });
   }
 
-  if (hidden.length > 0) {
-    if (hidden.length !== lastHiddenCount) {
-      lastHiddenCount = hidden.length;
-      log('HIDE', `Ocultados ${hidden.length} de ${total}`);
-    }
-    showHiddenSummary(hidden);
-    toast(`Hilos ocultados: ${hidden.length}`);
+  const summaryKey = hidden.map((h) => h.title + '|' + h.reason + '|' + (h.highlightColor || '')).join('\n');
+  if (summaryKey !== lastSummaryKey || (hidden.length > 0 && !document.getElementById('fc-hidden-summary'))) {
+    lastSummaryKey = summaryKey;
+    if (hidden.length > 0) showHiddenSummary(hidden);
+    else document.getElementById('fc-hidden-summary')?.remove();
+  }
+  if (hidden.length !== lastHiddenCount) {
+    lastHiddenCount = hidden.length;
+    log('HIDE', `Ocultados ${hidden.length} de ${total}`);
+    if (hidden.length > 0) toast(`Hilos ocultados: ${hidden.length}`);
   }
 }
