@@ -28,7 +28,14 @@ function handlePole(): void {
       if (qrIframe) {
         try {
           const iframeDoc = qrIframe.contentDocument || qrIframe.contentWindow?.document;
-          if (iframeDoc) { iframeDoc.body.innerHTML = msg; }
+          // Plain text into the WYSIWYG editor: never parse the message as HTML
+          if (iframeDoc) {
+            iframeDoc.body.textContent = '';
+            msg.split('\n').forEach((line, i) => {
+              if (i > 0) iframeDoc.body.appendChild(iframeDoc.createElement('br'));
+              iframeDoc.body.appendChild(iframeDoc.createTextNode(line));
+            });
+          }
         } catch (_) { /* ignore cross-origin */ }
       }
       log('POLE', `Texto rellenado: "${msg}"`);
