@@ -15,6 +15,15 @@ export interface DomAdapter {
   getOPAuthor(doc: Document): string;
 }
 
+// "@user - Actualizado ..." → "user". Names may contain spaces, ñ, accents and
+// symbols, so capture anything up to the date separator (no '@', bounded length).
+const AUTHOR_DATE_RE = /@([^@\n]{1,40}?)\s*-\s*(?:Actualizado|Ayer|Hoy|Anteayer)/i;
+
+function matchAuthorBeforeDate(text: string): string {
+  const m = text.match(AUTHOR_DATE_RE);
+  return m ? m[1].replace(/\s+/g, ' ').trim().toLowerCase() : '';
+}
+
 // ── Detection ────────────────────────────────────────────
 
 function detectTheme(): Theme {
@@ -115,9 +124,8 @@ function createMobileV1Adapter(): DomAdapter {
     if (!container) return '';
 
     try {
-      const fullText = container.textContent || '';
-      const match = fullText.match(/@([a-zA-Z0-9_\-.\xA0]+?)\s*-\s*(Actualizado|Ayer|Hoy|Anteayer)/i);
-      if (match && match[1]) return match[1].replace(/\xA0/g, '').toLowerCase();
+      const author = matchAuthorBeforeDate(container.textContent || '');
+      if (author) return author;
     } catch (_) { /* ignore */ }
 
     try {
@@ -391,10 +399,7 @@ function createDesktopV1Adapter(): DomAdapter {
       const name = cleanUser(authorSpan.textContent);
       if (name) return name;
     }
-    const text = container.textContent || '';
-    const match = text.match(/@([a-zA-Z0-9_\-.\xA0]+?)\s*-\s*(Actualizado|Ayer|Hoy|Anteayer)/i);
-    if (match) return match[1].replace(/\xA0/g, '').toLowerCase();
-    return '';
+    return matchAuthorBeforeDate(container.textContent || '');
   }
 
   function getSummaryTarget(): HTMLElement | null {
@@ -486,10 +491,7 @@ function createDesktopV2Adapter(): DomAdapter {
 
   function getThreadAuthor(container: HTMLElement | null): string {
     if (!container) return '';
-    const text = container.textContent || '';
-    const match = text.match(/@([a-zA-Z0-9_\-.\xA0]+?)\s*-\s*(Actualizado|Ayer|Hoy|Anteayer)/i);
-    if (match) return match[1].replace(/\xA0/g, '').toLowerCase();
-    return '';
+    return matchAuthorBeforeDate(container.textContent || '');
   }
 
   function getSummaryTarget(): HTMLElement | null {

@@ -100,7 +100,7 @@ export function buildConfigTab(content: HTMLElement): void {
   // ---- HILOS ----
   addSectionHeader(content, 'Hilos');
   addOption(content, 'Auto-minimizar al guardar palabras', 'Al guardar palabras clave, el panel se cierra solo.', getAutoMinimizeWords, setAutoMinimizeWords);
-  addOption(content, 'Ocultar hilos por autor', 'Solo compatible con Desktop-v2 (PC nuevo). Oculta hilos cuyo creador est\u00E9 en tu lista de ignorados. No funciona en Mobile-v1 (móvil antiguo).', getHideThreadByAuthor, setHideThreadByAuthor);
+  addOption(content, 'Ocultar hilos por autor', 'Oculta hilos cuyo creador est\u00E9 en tu lista de ignorados. No funciona en Mobile-v1 (móvil antiguo).', getHideThreadByAuthor, setHideThreadByAuthor);
 
   // ---- RESALTADOS ----
   addSectionHeader(content, 'Resaltados');
