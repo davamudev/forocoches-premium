@@ -10,7 +10,8 @@ Userscript for Forocoches.com. TS + Vite 6 + vite-plugin-monkey → single `dist
 ## Commands
 
 ```bash
-npm run build          # → dist/forocoches-premium.user.js
+npm run build          # tsc --noEmit + vite → dist/forocoches-premium.user.js
+npm run typecheck      # tsc --noEmit
 npm run dev            # vite build --watch (no dev server)
 npx tsc --noEmit       # typecheck
 ```
@@ -21,7 +22,7 @@ No tests, linter, formatter.
 
 | File | Role |
 |------|------|
-| `src/main.ts` | Entry: init, URL polling (500ms), deferred run (1s) |
+| `src/main.ts` | Entry: init, History API/popstate nav, deferred run (1s), daily auto-sync if list empty |
 | `src/runner.ts` | Page detection + Pole orchestration |
 | `src/dom-adapter.ts` | Theme detection + per-theme DOM ops |
 | `src/threads.ts` | Thread extraction from DOM |
@@ -52,8 +53,11 @@ localStorage `fc_config` JSON. Key bools:
 - `autoRedirectOP` / `autoReloadIgnore` — ignore UX
 - `showScrollUp` / `showScrollDown` / `showPoleButton` — floating buttons
 - `poleMessage` / `poleSearchPages` — Pole button config
-- `blockAds` / `hideNotices` — ad blocking
-- `theme` — `'auto' | 'legacy' | 'v2'`
+- `blockAds` — ad blocking (incl. notices)
+- `highlightOP` / `highlightOPColor` / `prioritizeHighlightOverHide` — highlights
+- `threadsPerPage` — WIP virtual pagination (number, 40 = off)
+
+All stored data validated on read/import (`storage.ts`). Debug logs: `localStorage.fc_debug = '1'` → `console.debug`.
 
 ## DOM Reference
 
@@ -70,7 +74,11 @@ Sanitized HTML snapshots in `dom/` (4 themes × 4 pages = 16 files). Real IDs �
 
 - `npm run dev` = `vite build --watch`, not dev server
 - SPA nav: monkey-patched `pushState`/`replaceState` + `popstate`
-- MutationObserver for dynamic content (debounced 150ms)
+- MutationObserver for dynamic content (debounced 150ms). Ignores mutations of own nodes (`OWN_SELECTOR` in `observer.ts`) — add new script-created containers there or run() loops
+- `hideThreads` recomputes every run: restores `[data-fcp-hidden]`, then re-hides
+- Word filter = whole-word regex on `normalizeStr` text, `*` wildcard
+- OP cache `fc_thread_op` = `{tid: {op, ts}}` LRU 200. Thread id from `t=` or `#qr_threadid` (permalinks `?p=`). No cache + not page 1 → fetch page 1
+- Sync with FC = merge (never drops local users); `fetchIgnoreList()` returns `null` on error
 - Deferred runs: 500ms (URL change), 1s (init)
 - v2 author: `"N @ username"` or `"@User - Actualizado..."` textContent
 - v2 post author: `querySelectorAll` + filter non-empty textContent (1st member.php link empty)
