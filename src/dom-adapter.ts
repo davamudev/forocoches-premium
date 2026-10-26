@@ -1,4 +1,3 @@
-import { log } from './toast';
 import { cleanUser } from './utils';
 
 export type Theme = 'mobile-v1' | 'mobile-v2' | 'desktop-v1' | 'desktop-v2';

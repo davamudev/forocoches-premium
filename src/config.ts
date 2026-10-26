@@ -126,7 +126,6 @@ export function setPoleSearchPages(v: boolean): void { setConfigField('poleSearc
 export function getBlockAds(): boolean { return getConfigField('blockAds'); }
 export function setBlockAds(v: boolean): void { setConfigField('blockAds', v); }
 
-export function getDebugMode(): boolean { return true; }
 
 export function getPoleMessage(): string {
   const c = getConfig();

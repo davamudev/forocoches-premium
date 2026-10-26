@@ -1,6 +1,5 @@
 import { toast, log } from './toast';
 import { cleanUser } from './utils';
-import { detectAdapter } from './dom-adapter';
 
 const KEY_USER_NOTES = 'fc_user_notes';
 
@@ -220,7 +219,6 @@ function createNoteWidget(username: string): HTMLElement {
 export function injectPostNotes(): void {
   if (window.location.pathname.indexOf('showthread.php') === -1) return;
 
-  const theme = detectAdapter().theme;
   const pageMargin = document.querySelector('div.page-margin');
   const postbitWrapper = document.querySelector('div.postbit_wrapper');
   const isMobile = !!pageMargin;
