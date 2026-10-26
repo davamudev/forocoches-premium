@@ -19,8 +19,8 @@ section[style*="min-width: 300px"] { display: none !important; }
 }
 
 function injectAdCSS(): void {
-  const existing = document.getElementById(AD_CSS_ID);
-  if (existing) existing.remove();
+  // run() fires often; the stylesheet only needs injecting once
+  if (document.getElementById(AD_CSS_ID)) return;
 
   let css = getAdCSS();
   css += 'form#vbnotices { display: none !important; }\n#notices-container, .notices-container { display: none !important; }\n';

@@ -113,6 +113,7 @@ function matchHighlightWordGroups(title: string, groups: HighlightGroup[]): { co
 
 let lastHiddenCount = -1;
 let lastSummaryKey = '';
+let noThreadsWarnedFor = '';
 
 // Undo previous hiding so every run recomputes from the current users/words
 function restoreHidden(): void {
@@ -131,7 +132,10 @@ function markHidden(el: HTMLElement | null | undefined): void {
 export function hideThreads(users: string[], words: string[]): void {
   restoreHidden();
   const threads = findThreads();
-  if (threads.length === 0) { toast('No se encontraron hilos'); return; }
+  if (threads.length === 0) {
+    if (noThreadsWarnedFor !== window.location.href) { noThreadsWarnedFor = window.location.href; toast('No se encontraron hilos'); }
+    return;
+  }
 
   const total = threads.length;
   const ad = detectAdapter();
