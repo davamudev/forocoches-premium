@@ -13,6 +13,19 @@ const TELEGRAM = '@x265Always';
 
 let lastUrl = window.location.href;
 
+const KEY_LAST_AUTO_SYNC = 'fc_last_auto_sync';
+const AUTO_SYNC_INTERVAL = 24 * 3600 * 1000;
+
+// Empty local list → pull from FC at most once a day, not on every page load
+function shouldAutoSync(): boolean {
+  try {
+    const last = Number(localStorage.getItem(KEY_LAST_AUTO_SYNC) || 0);
+    if (Date.now() - last < AUTO_SYNC_INTERVAL) return false;
+    localStorage.setItem(KEY_LAST_AUTO_SYNC, String(Date.now()));
+  } catch (_) { /* ignore */ }
+  return true;
+}
+
 function handleUrlChange(): void {
   if (window.location.href !== lastUrl) {
     log('NAVEGACION', `URL cambio: ${lastUrl} -> ${window.location.href}`);
@@ -44,9 +57,9 @@ function init(): void {
   buildUI();
   run();
   startObserver();
-  if (getUsers().length === 0) {
+  if (getUsers().length === 0 && shouldAutoSync()) {
     log('INIT', 'Lista de usuarios vacia, sincronizando con FC...');
-    syncIgnored();
+    syncIgnored(true);
   }
   // Detect URL changes via popstate (back/forward) and pushState/replaceState (SPA)
   window.addEventListener('popstate', handleUrlChange);
