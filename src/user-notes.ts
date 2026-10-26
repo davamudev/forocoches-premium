@@ -86,6 +86,7 @@ function showNotePopup(anchor: HTMLElement, username: string): void {
   popup.appendChild(btnRow);
 
   function close() {
+    document.removeEventListener('click', onClickOutside);
     popup.remove();
   }
 
@@ -140,7 +141,7 @@ function showNotePopup(anchor: HTMLElement, username: string): void {
       close();
     }
   }
-  setTimeout(() => document.addEventListener('click', onClickOutside), 0);
+  setTimeout(() => { if (popup.isConnected) document.addEventListener('click', onClickOutside); }, 0);
 }
 
 function updateAllNoteWidgets(username: string): void {
