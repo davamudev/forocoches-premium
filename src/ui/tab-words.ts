@@ -20,7 +20,7 @@ export function buildWordsTab(content: HTMLElement): void {
   title.textContent = 'Palabras clave';
   title.style.cssText = STYLE.TITLE;
   const desc = document.createElement('div');
-  desc.textContent = 'Oculta hilos cuyo titulo contenga estas palabras (una por linea)';
+  desc.textContent = 'Oculta hilos cuyo titulo contenga estas palabras completas (una por linea). Usa * como comodin: polit* = politica, politicos...';
   desc.style.cssText = STYLE.DESC;
   content.appendChild(title); content.appendChild(desc);
 

@@ -64,10 +64,35 @@ function showHiddenSummary(hidden: HiddenItem[]): void {
   target!.parentNode!.insertBefore(wrap, target!.nextSibling);
 }
 
+const wordRegexCache = new Map<string, RegExp | null>();
+
+// Whole-word match on normalized text ("culo" does not hit "vehículo").
+// "*" is a wildcard for letters/digits: "polit*" matches "politica", "politicos"...
+function wordRegex(word: string): RegExp | null {
+  let re = wordRegexCache.get(word);
+  if (re === undefined) {
+    const w = normalizeStr(word).trim();
+    if (!w.replace(/\*/g, '')) {
+      re = null;
+    } else {
+      const body = w.split('*').map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\p{L}\\p{N}]*');
+      re = new RegExp(`(?:^|[^\\p{L}\\p{N}])${body}(?=$|[^\\p{L}\\p{N}])`, 'u');
+    }
+    wordRegexCache.set(word, re);
+  }
+  return re;
+}
+
+export function matchesWord(normalizedText: string, word: string): boolean {
+  if (typeof word !== 'string' || !word) return false;
+  const re = wordRegex(word);
+  return !!re && re.test(normalizedText);
+}
+
 function matchWordsInText(text: string, words: string[], prefix?: string): string {
   const normalized = normalizeStr(text);
   for (const word of words) {
-    if (word && normalized.indexOf(normalizeStr(word)) !== -1) {
+    if (matchesWord(normalized, word)) {
       return `${prefix || ''}"${word}"`;
     }
   }
@@ -78,7 +103,7 @@ function matchHighlightWordGroups(title: string, groups: HighlightGroup[]): { co
   const normalized = normalizeStr(title);
   for (const group of groups) {
     for (const word of group.items) {
-      if (normalized.indexOf(normalizeStr(word)) !== -1) {
+      if (matchesWord(normalized, word)) {
         return { color: group.color, desc: group.desc };
       }
     }
