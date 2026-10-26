@@ -264,7 +264,7 @@ export function highlightOPPosts(): void {
         const badge = document.createElement('span');
         badge.className = 'fc-op-badge';
         badge.textContent = '\uD83D\uDCCC OP';
-badge.style.cssText = `display:inline-block;background:#FF6B35;color:white;font-size:11px;font-weight:bold;padding:${ad.theme === 'mobile-v2' ? '8px' : '2px'} 8px;border-radius:4px;margin-right:8px;line-height:1.5;`;
+        badge.style.cssText = `display:inline-block;background:#FF6B35;color:white;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:4px;margin-right:8px;line-height:1.5;`;
         firstAuthorLink.parentNode?.insertBefore(badge, firstAuthorLink);
       }
       }
