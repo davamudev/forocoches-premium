@@ -1,10 +1,10 @@
 import { getUsers, saveUsers } from '../storage';
 import { toast, log } from '../toast';
-import { cleanUser } from '../utils';
+import { cleanUser, getCurrentThreadId } from '../utils';
 import { getAutoRedirectOP, getAutoMinimize, autoMinimizePanel } from '../config';
 import { syncIgnored, addToFCIgnore, removeFromFCIgnore } from '../ignore-fc';
 import { run } from '../runner';
-import { detectAdapter } from '../dom-adapter';
+import { resolveThreadOP } from '../hide-posts';
 import { STYLE, COLORS } from './styles';
 
 let searchFilter = '';
@@ -77,8 +77,7 @@ export function buildUsersTab(content: HTMLElement): HTMLElement | null {
     opRow.appendChild(opBtn);
     content.appendChild(opRow);
 
-    const tidMatch = window.location.href.match(/showthread\.php\?t=(\d+)/i);
-    const threadId = tidMatch ? tidMatch[1] : '';
+    const threadId = getCurrentThreadId();
 
     function setOP(username: string) {
       if (username) {
@@ -110,15 +109,7 @@ export function buildUsersTab(content: HTMLElement): HTMLElement | null {
 
     if (threadId) {
       opLabel.textContent = 'OP: consultando...';
-      fetch('https://forocoches.com/foro/showthread.php?t=' + threadId, { credentials: 'include' })
-        .then(function (r) { return r.text(); })
-        .then(function (html) {
-          const parser = new DOMParser().parseFromString(html, 'text/html');
-          var opUser = detectAdapter().getOPAuthor(parser);
-          if (opUser) setOP(opUser);
-          else setOP('');
-        })
-        .catch(function () { setOP(''); });
+      resolveThreadOP(threadId).then(setOP);
     } else {
       setOP('');
     }

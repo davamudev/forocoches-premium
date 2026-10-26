@@ -126,7 +126,16 @@ export function setPoleSearchPages(v: boolean): void { setConfigField('poleSearc
 export function getBlockAds(): boolean { return getConfigField('blockAds'); }
 export function setBlockAds(v: boolean): void { setConfigField('blockAds', v); }
 
-export function getDebugMode(): boolean { return true; }
+export function getThreadsPerPage(): number {
+  const c = getConfig();
+  return c.threadsPerPage || 40;
+}
+export function setThreadsPerPage(v: number): void {
+  const c = getConfig();
+  c.threadsPerPage = v;
+  saveConfig(c);
+  log('CONFIG', 'Hilos por p\u00E1gina: ' + v);
+}
 
 export function getPoleMessage(): string {
   const c = getConfig();

@@ -1,7 +1,7 @@
 import type { HighlightGroup } from '../types';
 import { getHighlightUserGroups, saveHighlightUserGroups, getHighlightWordGroups, saveHighlightWordGroups } from '../storage';
-import { cleanUser, normalizeStr } from '../utils';
-import { toast, log } from '../toast';
+import { cleanUser } from '../utils';
+import { toast } from '../toast';
 import { run } from '../runner';
 import { STYLE, COLORS } from './styles';
 

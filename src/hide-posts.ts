@@ -1,6 +1,6 @@
 import { getUsers, saveUsers } from './storage';
 import { toast, log } from './toast';
-import { cleanUser } from './utils';
+import { cleanUser, getCurrentThreadId } from './utils';
 import { getAutoReloadIgnore, getShowPlaceholder, getDisablePostHiding, getHighlightOP, getHighlightOPColor } from './config';
 import { addToFCIgnore } from './ignore-fc';
 import { run } from './runner';
@@ -141,41 +141,85 @@ export function addIgnorePostButtons(): void {
   if (added > 0 && added !== lastIgnorarAdded) { lastIgnorarAdded = added; log('IGNORE-BTN', `Ignorar a\u00F1adidos: ${added}`); }
 }
 
+// tid -> OP, most recent OP_CACHE_MAX threads
 const OP_CACHE_KEY = 'fc_thread_op';
+const OP_CACHE_MAX = 200;
+type OpCache = Record<string, { op: string; ts: number }>;
 
-function getCachedOP(): string {
+function readOpCache(): OpCache {
   try {
     const data = JSON.parse(localStorage.getItem(OP_CACHE_KEY) || '{}');
-    const tidMatch = window.location.href.match(/showthread\.php\?t=(\d+)/i);
-    const tid = tidMatch ? tidMatch[1] : '';
-    if (data.tid === tid && data.op) return data.op;
-  } catch (_) { /* ignore */ }
-  return '';
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+    // Legacy single-entry format { tid, op }
+    if (typeof data.tid === 'string' && typeof data.op === 'string') return { [data.tid]: { op: data.op, ts: 0 } };
+    return data;
+  } catch (_) { return {}; }
 }
 
-function cacheOP(op: string): void {
-  const tidMatch = window.location.href.match(/showthread\.php\?t=(\d+)/i);
-  const tid = tidMatch ? tidMatch[1] : '';
+function getCachedOP(tid: string): string {
+  const cache = readOpCache();
+  if (!Object.prototype.hasOwnProperty.call(cache, tid)) return '';
+  const entry = cache[tid];
+  return entry && typeof entry.op === 'string' ? entry.op : '';
+}
+
+function cacheOP(tid: string, op: string): void {
   if (!tid || !op) return;
-  try { localStorage.setItem(OP_CACHE_KEY, JSON.stringify({ tid, op })); } catch (_) { /* ignore */ }
+  const cache = readOpCache();
+  cache[tid] = { op, ts: Date.now() };
+  Object.keys(cache).sort((a, b) => (cache[b]?.ts || 0) - (cache[a]?.ts || 0)).slice(OP_CACHE_MAX).forEach((k) => { delete cache[k]; });
+  try { localStorage.setItem(OP_CACHE_KEY, JSON.stringify(cache)); } catch (_) { /* ignore */ }
+}
+
+// Only page 1 reached by ?t= (no permalink/goto) is known to start with the OP's post
+function isVerifiedFirstPage(): boolean {
+  const q = new URLSearchParams(window.location.search);
+  if (q.has('p') || q.has('goto')) return false;
+  return (q.get('page') || '1') === '1';
+}
+
+const opRequests = new Map<string, Promise<string>>();
+
+// Reads the OP from page 1 of the thread. One request per thread and page load.
+export function fetchThreadOP(tid: string): Promise<string> {
+  let req = opRequests.get(tid);
+  if (!req) {
+    req = fetch(`https://forocoches.com/foro/showthread.php?t=${tid}`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.text() : ''))
+      .then((html) => {
+        const op = html ? detectAdapter().getOPAuthor(new DOMParser().parseFromString(html, 'text/html')) : '';
+        if (op) cacheOP(tid, op);
+        log('OP', `OP del hilo ${tid}: ${op || 'NO ENCONTRADO'}`);
+        return op;
+      })
+      .catch(() => '');
+    opRequests.set(tid, req);
+  }
+  return req;
+}
+
+export function resolveThreadOP(tid: string): Promise<string> {
+  const cached = getCachedOP(tid);
+  return cached ? Promise.resolve(cached) : fetchThreadOP(tid);
 }
 
 export function highlightOPPosts(): void {
   if (!getHighlightOP()) return;
   if (window.location.pathname.indexOf('showthread.php') === -1) return;
 
-  const pageMatch = window.location.href.match(/page=(\d+)/);
-  const curPage = pageMatch ? parseInt(pageMatch[1], 10) : 1;
-  const ad = detectAdapter();
-
-  let op = getCachedOP();
-  if (!op) {
-    if (curPage > 1) return;
-    op = ad.getOPAuthor(document);
-    if (!op) return;
-    cacheOP(op);
+  const tid = getCurrentThreadId();
+  let op = tid ? getCachedOP(tid) : '';
+  if (!op && isVerifiedFirstPage()) {
+    op = detectAdapter().getOPAuthor(document);
+    if (op) cacheOP(tid, op);
   }
+  if (op) { applyOPHighlight(op); return; }
+  if (!tid || isVerifiedFirstPage()) return;
+  fetchThreadOP(tid).then((fetched) => { if (fetched && getHighlightOP()) applyOPHighlight(fetched); });
+}
 
+function applyOPHighlight(op: string): void {
+  const ad = detectAdapter();
   const bgColor = getHighlightOPColor();
   const allPosts = document.querySelectorAll<HTMLElement>('li.postbit, div[id^="edit"]');
   if (allPosts.length === 0) return;
@@ -264,7 +308,7 @@ export function highlightOPPosts(): void {
         const badge = document.createElement('span');
         badge.className = 'fc-op-badge';
         badge.textContent = '\uD83D\uDCCC OP';
-badge.style.cssText = `display:inline-block;background:#FF6B35;color:white;font-size:11px;font-weight:bold;padding:${ad.theme === 'mobile-v2' ? '8px' : '2px'} 8px;border-radius:4px;margin-right:8px;line-height:1.5;`;
+        badge.style.cssText = `display:inline-block;background:#FF6B35;color:white;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:4px;margin-right:8px;line-height:1.5;`;
         firstAuthorLink.parentNode?.insertBefore(badge, firstAuthorLink);
       }
       }

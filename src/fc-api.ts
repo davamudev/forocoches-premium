@@ -14,10 +14,18 @@ async function fetchAsDoc(url: string): Promise<Document> {
   return new DOMParser().parseFromString(html, 'text/html');
 }
 
-export async function fetchIgnoreList(): Promise<string[]> {
+// null = could not read the list (network error, logged out, unexpected page)
+export async function fetchIgnoreList(): Promise<string[] | null> {
   log('FC-API', 'Obteniendo lista de ignorados de FC...');
   try {
-    const doc = await fetchAsDoc('https://forocoches.com/foro/profile.php?do=ignorelist');
+    const response = await fetch('https://forocoches.com/foro/profile.php?do=ignorelist', { credentials: 'include' });
+    if (!response.ok) { log('FC-API', `ignorelist HTTP ${response.status}`); return null; }
+    const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+    // The ignore list form is present even when the list is empty; a login page lacks it
+    if (!doc.querySelector('form[action*="userlist=ignore"]') && !doc.querySelector('#ignorelist')) {
+      log('FC-API', 'ignorelist: respuesta sin lista (sesion caducada?)');
+      return null;
+    }
     const users: string[] = [];
     doc.querySelectorAll('#ignorelist a[href*="member.php"]').forEach((a) => {
       const n = cleanUser(a.textContent);
@@ -27,7 +35,7 @@ export async function fetchIgnoreList(): Promise<string[]> {
     return users;
   } catch {
     log('FC-API', 'Error al obtener ignorelist');
-    return [];
+    return null;
   }
 }
 
@@ -84,19 +92,15 @@ export async function fetchProfileForIgnore(username: string): Promise<{ ignLink
   log('FC-API', `Buscando perfil de @${username} para ignorar...`);
   try {
     const doc = await fetchAsDoc(`https://forocoches.com/foro/member.php?username=${encodeURIComponent(username)}`);
-    const html = doc.documentElement.innerHTML;
-    const matchLink = html.match(/<a[^>]*href=["']([^"']*profile\.php\?do=addlist[^"']*u=(\d+)[^"']*)["'][^>]*>[\s\S]*?<\/a>/i);
-    if (!matchLink) {
-      log('FC-API', `No se encontro link addlist para @${username}`);
+    // Desktop profiles list "Agregar a Contactos" (userlist=buddy) before the ignore link
+    const anchor = doc.querySelector<HTMLAnchorElement>('a[href*="profile.php?do=addlist"][href*="userlist=ignore"]');
+    const userId = anchor?.getAttribute('href')?.match(/[?&]u=(\d+)/)?.[1];
+    if (!userId) {
+      log('FC-API', `No se encontro link addlist ignore para @${username}`);
       return null;
     }
 
-    let ignLink = matchLink[1].replace(/&amp;/g, '&');
-    const userId = matchLink[2];
-
-    if (ignLink.indexOf('/') === 0) ignLink = 'https://forocoches.com' + ignLink;
-    else if (ignLink.indexOf('http') !== 0) ignLink = 'https://forocoches.com/foro/' + ignLink;
-
+    const ignLink = `https://forocoches.com/foro/profile.php?do=addlist&userlist=ignore&u=${userId}`;
     log('FC-API', `Link ignorar encontrado para @${username}: ${ignLink}`);
     return { ignLink, userId };
   } catch {

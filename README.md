@@ -12,8 +12,8 @@
 ## ✨ Funcionalidades
 
 ### Ocultar hilos
-- Por **palabras clave** en el titulo (sin acentos, insensitive)
-- Por **autor** (solo Desktop-v2, no Desktop-v1)
+- Por **palabras clave** en el titulo (sin acentos, insensitive). Coincide por **palabra completa** ("culo" no oculta "vehículo"); usa `*` como comodín (`polit*` → politica, politicos...)
+- Por **autor** (Mobile-v2, Desktop-v1 y Desktop-v2; no Mobile-v1)
 - Muestra resumen de hilos ocultados con enlaces y motivo
 
 ![](images/features/hilos-ocultos.png)
@@ -72,8 +72,8 @@
 - **4 pestañas**:
   - **Usuarios**: ver, anadir, eliminar, buscar por username, sincronizar con FC, eliminar todos
   - **Palabras**: editor de palabras clave + categorias predefinidas (Politica, Futbol, Anime, Videojuegos, Cripto, +18)
+  - **Resaltado**: grupos de usuarios y palabras con color propio
   - **Config**: varias opciones de configuracion + exportar/importar
-  - **Logs**: registro de depuracion con botones Limpiar/Copiar
 
 ![](images/features/usuarios.png)
 ![](images/features/palabras.png)
@@ -85,11 +85,11 @@
 
 ### Eliminar publicidad y elementos molestos
 - Bloquea **toda la publicidad** (optidigital, banners flotantes, skyscraper)
-- Elimina avisos, noticias promocionadas y barra de cookies (`#infocookie`, `#vbnotices`)
+- Elimina avisos y noticias promocionadas (`#vbnotices`, `#notices-container`)
 - Elimina contenedores vacíos y placeholders de anuncios que distraen
 - Elimina el botón nativo de "subir" para no duplicar funcionalidad
 - Funciona en **todos los diseños**: Mobile-v1 (móvil antiguo), Mobile-v2 (móvil nuevo), Desktop-v1 (PC antiguo) y Desktop-v2 (PC nuevo)
-- Configurable desde el panel (activar/desactivar por separado publicidad y avisos)
+- Configurable desde el panel (opción "Bloquear publicidad", incluye los avisos)
 
 ### Integracion con Forocoches real
 - Sincroniza la lista de ignorados de FC
@@ -173,8 +173,7 @@ Android soporta Tampermonkey directamente en los navegadores compatibles.
 | Botón Pole | ✅ ON | Muestra el boton 🏎️ para pole automatica |
 | Mensaje para Pole | "Pole" | Texto a enviar en la pole (puedes poner incluso un gif o cualquier cosa) |
 | Buscar en páginas siguientes | ✅ ON | Busca en paginas siguientes si no hay hilos sin respuestas (hasta 35) |
-| Bloquear publicidad | ✅ ON | Elimina banners y anuncios (optidigital, flotantes, skyscraper) |
-| Ocultar avisos | ✅ ON | Oculta mensajes de aviso, noticias promocionadas y cookies |
+| Bloquear publicidad | ✅ ON | Elimina banners, anuncios (optidigital, flotantes, skyscraper) y avisos |
 
 ---
 
@@ -199,7 +198,8 @@ Android soporta Tampermonkey directamente en los navegadores compatibles.
 git clone <repo>
 cd forocoches-premium
 npm install
-npm run build          # genera dist/forocoches-premium.user.js
+npm run build          # typecheck + genera dist/forocoches-premium.user.js
+npm run typecheck      # solo tsc --noEmit
 npm run dev            # modo watch para desarrollo
 ```
 
@@ -217,7 +217,7 @@ npm run dev            # modo watch para desarrollo
 
 ```
 src/
-├── main.ts           # Entry point: init, URL polling, deferred runs
+├── main.ts           # Entry point: init, History API + popstate, deferred runs
 ├── runner.ts         # Deteccion de pagina y orquestacion
 ├── dom-adapter.ts    # Adapter pattern: theme detection + DOM ops
 ├── config.ts         # Getters/setters de configuracion
@@ -237,8 +237,8 @@ src/
     ├── index.ts      # Orquestador: panel, botones, tabs
     ├── tab-users.ts  # Pestaña Usuarios
     ├── tab-words.ts  # Pestaña Palabras
+    ├── tab-highlight.ts # Pestaña Resaltado
     ├── tab-config.ts # Pestaña Config
-    ├── tab-logs.ts   # Pestaña Logs
     ├── presets.ts    # Categorias predefinidas
     └── styles.ts     # Estilos CSS
 ```

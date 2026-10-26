@@ -64,10 +64,35 @@ function showHiddenSummary(hidden: HiddenItem[]): void {
   target!.parentNode!.insertBefore(wrap, target!.nextSibling);
 }
 
+const wordRegexCache = new Map<string, RegExp | null>();
+
+// Whole-word match on normalized text ("culo" does not hit "vehículo").
+// "*" is a wildcard for letters/digits: "polit*" matches "politica", "politicos"...
+function wordRegex(word: string): RegExp | null {
+  let re = wordRegexCache.get(word);
+  if (re === undefined) {
+    const w = normalizeStr(word).trim();
+    if (!w.replace(/\*/g, '')) {
+      re = null;
+    } else {
+      const body = w.split('*').map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\p{L}\\p{N}]*');
+      re = new RegExp(`(?:^|[^\\p{L}\\p{N}])${body}(?=$|[^\\p{L}\\p{N}])`, 'u');
+    }
+    wordRegexCache.set(word, re);
+  }
+  return re;
+}
+
+export function matchesWord(normalizedText: string, word: string): boolean {
+  if (typeof word !== 'string' || !word) return false;
+  const re = wordRegex(word);
+  return !!re && re.test(normalizedText);
+}
+
 function matchWordsInText(text: string, words: string[], prefix?: string): string {
   const normalized = normalizeStr(text);
   for (const word of words) {
-    if (word && normalized.indexOf(normalizeStr(word)) !== -1) {
+    if (matchesWord(normalized, word)) {
       return `${prefix || ''}"${word}"`;
     }
   }
@@ -78,7 +103,7 @@ function matchHighlightWordGroups(title: string, groups: HighlightGroup[]): { co
   const normalized = normalizeStr(title);
   for (const group of groups) {
     for (const word of group.items) {
-      if (normalized.indexOf(normalizeStr(word)) !== -1) {
+      if (matchesWord(normalized, word)) {
         return { color: group.color, desc: group.desc };
       }
     }
@@ -87,10 +112,30 @@ function matchHighlightWordGroups(title: string, groups: HighlightGroup[]): { co
 }
 
 let lastHiddenCount = -1;
+let lastSummaryKey = '';
+let noThreadsWarnedFor = '';
+
+// Undo previous hiding so every run recomputes from the current users/words
+function restoreHidden(): void {
+  document.querySelectorAll<HTMLElement>('[data-fcp-hidden]').forEach((el) => {
+    el.style.display = '';
+    delete el.dataset.fcpHidden;
+  });
+}
+
+function markHidden(el: HTMLElement | null | undefined): void {
+  if (!el) return;
+  el.style.display = 'none';
+  el.dataset.fcpHidden = '1';
+}
 
 export function hideThreads(users: string[], words: string[]): void {
+  restoreHidden();
   const threads = findThreads();
-  if (threads.length === 0) { toast('No se encontraron hilos'); return; }
+  if (threads.length === 0) {
+    if (noThreadsWarnedFor !== window.location.href) { noThreadsWarnedFor = window.location.href; toast('No se encontraron hilos'); }
+    return;
+  }
 
   const total = threads.length;
   const ad = detectAdapter();
@@ -169,10 +214,9 @@ export function hideThreads(users: string[], words: string[]): void {
 
   // Apply hiding
   hidden.forEach((item) => {
-    if (item.container) item.container.style.display = 'none';
-    if (item.extraContainer) item.extraContainer.style.display = 'none';
-    const sep = detectAdapter().getSeparator(item.container!);
-    if (sep) sep.style.display = 'none';
+    markHidden(item.container);
+    markHidden(item.extraContainer);
+    if (item.container) markHidden(ad.getSeparator(item.container));
   });
 
   // Apply user/word highlights in place
@@ -194,12 +238,15 @@ export function hideThreads(users: string[], words: string[]): void {
     });
   }
 
-  if (hidden.length > 0) {
-    if (hidden.length !== lastHiddenCount) {
-      lastHiddenCount = hidden.length;
-      log('HIDE', `Ocultados ${hidden.length} de ${total}`);
-    }
-    showHiddenSummary(hidden);
-    toast(`Hilos ocultados: ${hidden.length}`);
+  const summaryKey = hidden.map((h) => h.title + '|' + h.reason + '|' + (h.highlightColor || '')).join('\n');
+  if (summaryKey !== lastSummaryKey || (hidden.length > 0 && !document.getElementById('fc-hidden-summary'))) {
+    lastSummaryKey = summaryKey;
+    if (hidden.length > 0) showHiddenSummary(hidden);
+    else document.getElementById('fc-hidden-summary')?.remove();
+  }
+  if (hidden.length !== lastHiddenCount) {
+    lastHiddenCount = hidden.length;
+    log('HIDE', `Ocultados ${hidden.length} de ${total}`);
+    if (hidden.length > 0) toast(`Hilos ocultados: ${hidden.length}`);
   }
 }

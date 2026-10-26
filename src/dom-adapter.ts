@@ -1,4 +1,3 @@
-import { log } from './toast';
 import { cleanUser } from './utils';
 
 export type Theme = 'mobile-v1' | 'mobile-v2' | 'desktop-v1' | 'desktop-v2';
@@ -14,6 +13,17 @@ export interface DomAdapter {
   getLinkRow(post: HTMLElement): HTMLElement | null;
   getSeparator(container: HTMLElement): HTMLElement | null;
   getOPAuthor(doc: Document): string;
+  getThreadListParent(): HTMLElement | null;
+  getThreadId(container: HTMLElement): string;
+}
+
+// "@user - Actualizado ..." → "user". Names may contain spaces, ñ, accents and
+// symbols, so capture anything up to the date separator (no '@', bounded length).
+const AUTHOR_DATE_RE = /@([^@\n]{1,40}?)\s*-\s*(?:Actualizado|Ayer|Hoy|Anteayer)/i;
+
+function matchAuthorBeforeDate(text: string): string {
+  const m = text.match(AUTHOR_DATE_RE);
+  return m ? m[1].replace(/\s+/g, ' ').trim().toLowerCase() : '';
 }
 
 // ── Detection ────────────────────────────────────────────
@@ -27,6 +37,10 @@ function detectTheme(): Theme {
   if (document.querySelector('div.threads-list, div.postbit_wrapper')) return 'mobile-v2';
   // desktop-v1 showthread (vBulletin post table, no threadlist)
   if (document.querySelector('table[id^="post"]')) return 'desktop-v1';
+  // Other pages (member.php, profile.php): generic layout markers
+  const isMobileLayout = !!document.querySelector('.page-margin');
+  if (document.querySelector('.user-notifications-count-wrapper')) return isMobileLayout ? 'mobile-v2' : 'desktop-v2';
+  if (document.querySelector('.tborder') && !isMobileLayout) return 'desktop-v1';
   // mobile-v1 fallback
   return 'mobile-v1';
 }
@@ -112,9 +126,8 @@ function createMobileV1Adapter(): DomAdapter {
     if (!container) return '';
 
     try {
-      const fullText = container.textContent || '';
-      const match = fullText.match(/@([a-zA-Z0-9_\-.\xA0]+?)\s*-\s*(Actualizado|Ayer|Hoy|Anteayer)/i);
-      if (match && match[1]) return match[1].replace(/\xA0/g, '').toLowerCase();
+      const author = matchAuthorBeforeDate(container.textContent || '');
+      if (author) return author;
     } catch (_) { /* ignore */ }
 
     try {
@@ -208,6 +221,21 @@ function createMobileV1Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    const sections = document.querySelectorAll('section');
+    if (sections.length > 0) return sections[sections.length - 1];
+    return document.querySelector('main') || document.querySelector('#threadslist') || document.body;
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'mobile-v1' as Theme,
     getThreadContainer,
@@ -219,6 +247,8 @@ function createMobileV1Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }
 
@@ -326,6 +356,19 @@ function createMobileV2Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    return document.querySelector('div.threads-list');
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'mobile-v2' as Theme,
     getThreadContainer,
@@ -337,6 +380,8 @@ function createMobileV2Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }
 
@@ -388,10 +433,7 @@ function createDesktopV1Adapter(): DomAdapter {
       const name = cleanUser(authorSpan.textContent);
       if (name) return name;
     }
-    const text = container.textContent || '';
-    const match = text.match(/@([a-zA-Z0-9_\-.\xA0]+?)\s*-\s*(Actualizado|Ayer|Hoy|Anteayer)/i);
-    if (match) return match[1].replace(/\xA0/g, '').toLowerCase();
-    return '';
+    return matchAuthorBeforeDate(container.textContent || '');
   }
 
   function getSummaryTarget(): HTMLElement | null {
@@ -434,6 +476,21 @@ function createDesktopV1Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    const tbody = document.querySelector<HTMLElement>('table#threadslist > tbody[id^="threadbits_"]');
+    if (tbody) return tbody;
+    return document.querySelector<HTMLElement>('table#threadslist');
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'desktop-v1' as Theme,
     getThreadContainer,
@@ -445,6 +502,8 @@ function createDesktopV1Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }
 
@@ -483,10 +542,7 @@ function createDesktopV2Adapter(): DomAdapter {
 
   function getThreadAuthor(container: HTMLElement | null): string {
     if (!container) return '';
-    const text = container.textContent || '';
-    const match = text.match(/@([a-zA-Z0-9_\-.\xA0]+?)\s*-\s*(Actualizado|Ayer|Hoy|Anteayer)/i);
-    if (match) return match[1].replace(/\xA0/g, '').toLowerCase();
-    return '';
+    return matchAuthorBeforeDate(container.textContent || '');
   }
 
   function getSummaryTarget(): HTMLElement | null {
@@ -524,6 +580,22 @@ function createDesktopV2Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    const sec = document.querySelector<HTMLElement>('section.without-top-corners.without-bottom-corners');
+    if (!sec) return null;
+    const flexDiv = sec.querySelector<HTMLElement>('div[style*="display: flex"][style*="flex-direction"]');
+    return flexDiv || sec;
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'desktop-v2' as Theme,
     getThreadContainer,
@@ -535,5 +607,7 @@ function createDesktopV2Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }

@@ -1,19 +1,24 @@
 import { STYLE } from './ui/styles';
 
-declare function GM_log(message: string): void;
-
 function ts(): string {
   var d = new Date();
   return d.toLocaleString('es-ES', { hour12: false }) + '.' +
     String(d.getMilliseconds()).padStart(3, '0');
 }
 
+// GM_log is unavailable with @grant none. Enable with localStorage.fc_debug = '1'.
+let debugEnabled: boolean | null = null;
+
+function isDebug(): boolean {
+  if (debugEnabled === null) {
+    try { debugEnabled = localStorage.getItem('fc_debug') === '1'; } catch (_) { debugEnabled = false; }
+  }
+  return debugEnabled;
+}
+
 export function log(module: string, ...messages: string[]): void {
-  const time = ts();
-  const prefix = `${time} [${module}]`;
-  try {
-    if (typeof GM_log !== 'undefined') { GM_log(prefix + ' ' + messages.join(' | ')); }
-  } catch (_) { /* ignore */ }
+  if (!isDebug()) return;
+  console.debug(`${ts()} [FCP ${module}]`, messages.join(' | '));
 }
 
 let toastId: ReturnType<typeof setTimeout> | null = null;

@@ -6,6 +6,7 @@ import { hideAds } from './hide-ads';
 import { findThreads } from './threads';
 import { injectPostNotes, injectProfileNote } from './user-notes';
 import { QUICK_REPLY_SELECTOR } from './selectors';
+import { enhancePagination } from './pagination';
 let lastLogKey = '';
 
 function handlePole(): void {
@@ -28,7 +29,14 @@ function handlePole(): void {
       if (qrIframe) {
         try {
           const iframeDoc = qrIframe.contentDocument || qrIframe.contentWindow?.document;
-          if (iframeDoc) { iframeDoc.body.innerHTML = msg; }
+          // Plain text into the WYSIWYG editor: never parse the message as HTML
+          if (iframeDoc) {
+            iframeDoc.body.textContent = '';
+            msg.split('\n').forEach((line, i) => {
+              if (i > 0) iframeDoc.body.appendChild(iframeDoc.createElement('br'));
+              iframeDoc.body.appendChild(iframeDoc.createTextNode(line));
+            });
+          }
         } catch (_) { /* ignore cross-origin */ }
       }
       log('POLE', `Texto rellenado: "${msg}"`);
@@ -111,7 +119,7 @@ export function run(): void {
       log('RUN', 'showthread', 'Ignorados: ' + users.length, 'Palabras: ' + words.length);
     }
   }
-  if (path.indexOf('forumdisplay.php') !== -1) { hideThreads(users, words); handlePoleSearch(); }
+  if (path.indexOf('forumdisplay.php') !== -1) { enhancePagination(); hideThreads(users, words); handlePoleSearch(); }
   else if (path.indexOf('showthread.php') !== -1) { hidePosts(users); addIgnorePostButtons(); highlightOPPosts(); injectPostNotes(); handlePole(); }
   else if (path.indexOf('member.php') !== -1) { injectProfileNote(); }
 }

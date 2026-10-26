@@ -1,6 +1,6 @@
 import { log } from '../toast';
 import { getUsers, saveUsers } from '../storage';
-import { syncIgnored, removeFromFCIgnore } from '../ignore-fc';
+import { removeFromFCIgnore } from '../ignore-fc';
 import { toast } from '../toast';
 import { getShowScrollUp, getShowScrollDown, getShowPoleButton, getPoleMessage, getPoleSearchPages } from '../config';
 import { buildUsersTab, renderUserList } from './tab-users';

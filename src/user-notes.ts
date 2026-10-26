@@ -1,15 +1,21 @@
 import { toast, log } from './toast';
 import { cleanUser } from './utils';
-import { detectAdapter } from './dom-adapter';
 
 const KEY_USER_NOTES = 'fc_user_notes';
 
+// Null-prototype dict: usernames like "constructor" or "__proto__" are plain keys
 export function getUserNotes(): Record<string, string> {
+  const notes: Record<string, string> = Object.create(null);
   try {
     const data = localStorage.getItem(KEY_USER_NOTES);
-    if (data) { const parsed = JSON.parse(data); if (typeof parsed === 'object' && parsed !== null) return parsed; }
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        Object.keys(parsed).forEach((k) => { if (typeof parsed[k] === 'string') notes[k] = parsed[k]; });
+      }
+    }
   } catch (_) { }
-  return {};
+  return notes;
 }
 
 function saveNotes(notes: Record<string, string>): void {
@@ -30,7 +36,8 @@ export function deleteUserNote(username: string): void {
 }
 
 export function getNote(username: string): string {
-  return getUserNotes()[username.toLowerCase()] || '';
+  const note = getUserNotes()[username.toLowerCase()];
+  return typeof note === 'string' ? note : '';
 }
 
 function showNotePopup(anchor: HTMLElement, username: string): void {
@@ -79,6 +86,7 @@ function showNotePopup(anchor: HTMLElement, username: string): void {
   popup.appendChild(btnRow);
 
   function close() {
+    document.removeEventListener('click', onClickOutside);
     popup.remove();
   }
 
@@ -133,7 +141,7 @@ function showNotePopup(anchor: HTMLElement, username: string): void {
       close();
     }
   }
-  setTimeout(() => document.addEventListener('click', onClickOutside), 0);
+  setTimeout(() => { if (popup.isConnected) document.addEventListener('click', onClickOutside); }, 0);
 }
 
 function updateAllNoteWidgets(username: string): void {
@@ -220,7 +228,6 @@ function createNoteWidget(username: string): HTMLElement {
 export function injectPostNotes(): void {
   if (window.location.pathname.indexOf('showthread.php') === -1) return;
 
-  const theme = detectAdapter().theme;
   const pageMargin = document.querySelector('div.page-margin');
   const postbitWrapper = document.querySelector('div.postbit_wrapper');
   const isMobile = !!pageMargin;
