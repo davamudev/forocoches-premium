@@ -11,12 +11,19 @@ Userscript for Forocoches.com. TS + Vite 6 + vite-plugin-monkey → single `dist
 
 ```bash
 npm run build          # tsc --noEmit + vite → dist/forocoches-premium.user.js
-npm run typecheck      # tsc --noEmit
+npm run typecheck      # tsc --noEmit (src) + tsc -p test (tests)
+npm test               # vitest run (jsdom, test/)
 npm run dev            # vite build --watch (no dev server)
-npx tsc --noEmit       # typecheck
 ```
 
-No tests, linter, formatter.
+No linter, formatter. CI (`.github/workflows/ci.yml`): `npm ci` → typecheck → test → build.
+
+## Tests
+
+Vitest + jsdom, `test/*.test.ts`. Env `node`; `test/helpers.ts` makes own JSDOM per `setupDom(html, url)` from `dom/` fixtures, sets globals.
+- `loadApp()` → fresh `src/` modules per test (`vi.resetModules`, via `test/app.ts`). Add new exports there.
+- Network never real: `fetch`/`XMLHttpRequest` blocked by default, `mockFetch(routes)` per test. Calls logged in `net.calls`.
+- After each test: src timers cleared, MutationObservers disconnected, windows closed (else stale observer → `run()` leaks into next test).
 
 ## Architecture
 
