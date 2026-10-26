@@ -3,12 +3,19 @@ import { cleanUser } from './utils';
 
 const KEY_USER_NOTES = 'fc_user_notes';
 
+// Null-prototype dict: usernames like "constructor" or "__proto__" are plain keys
 export function getUserNotes(): Record<string, string> {
+  const notes: Record<string, string> = Object.create(null);
   try {
     const data = localStorage.getItem(KEY_USER_NOTES);
-    if (data) { const parsed = JSON.parse(data); if (typeof parsed === 'object' && parsed !== null) return parsed; }
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        Object.keys(parsed).forEach((k) => { if (typeof parsed[k] === 'string') notes[k] = parsed[k]; });
+      }
+    }
   } catch (_) { }
-  return {};
+  return notes;
 }
 
 function saveNotes(notes: Record<string, string>): void {
@@ -29,7 +36,8 @@ export function deleteUserNote(username: string): void {
 }
 
 export function getNote(username: string): string {
-  return getUserNotes()[username.toLowerCase()] || '';
+  const note = getUserNotes()[username.toLowerCase()];
+  return typeof note === 'string' ? note : '';
 }
 
 function showNotePopup(anchor: HTMLElement, username: string): void {
