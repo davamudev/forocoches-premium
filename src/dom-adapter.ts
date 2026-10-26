@@ -13,6 +13,8 @@ export interface DomAdapter {
   getLinkRow(post: HTMLElement): HTMLElement | null;
   getSeparator(container: HTMLElement): HTMLElement | null;
   getOPAuthor(doc: Document): string;
+  getThreadListParent(): HTMLElement | null;
+  getThreadId(container: HTMLElement): string;
 }
 
 // "@user - Actualizado ..." → "user". Names may contain spaces, ñ, accents and
@@ -219,6 +221,21 @@ function createMobileV1Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    const sections = document.querySelectorAll('section');
+    if (sections.length > 0) return sections[sections.length - 1];
+    return document.querySelector('main') || document.querySelector('#threadslist') || document.body;
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'mobile-v1' as Theme,
     getThreadContainer,
@@ -230,6 +247,8 @@ function createMobileV1Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }
 
@@ -337,6 +356,19 @@ function createMobileV2Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    return document.querySelector('div.threads-list');
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'mobile-v2' as Theme,
     getThreadContainer,
@@ -348,6 +380,8 @@ function createMobileV2Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }
 
@@ -442,6 +476,21 @@ function createDesktopV1Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    const tbody = document.querySelector<HTMLElement>('table#threadslist > tbody[id^="threadbits_"]');
+    if (tbody) return tbody;
+    return document.querySelector<HTMLElement>('table#threadslist');
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'desktop-v1' as Theme,
     getThreadContainer,
@@ -453,6 +502,8 @@ function createDesktopV1Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }
 
@@ -529,6 +580,22 @@ function createDesktopV2Adapter(): DomAdapter {
     return '';
   }
 
+  function getThreadListParent(): HTMLElement | null {
+    const sec = document.querySelector<HTMLElement>('section.without-top-corners.without-bottom-corners');
+    if (!sec) return null;
+    const flexDiv = sec.querySelector<HTMLElement>('div[style*="display: flex"][style*="flex-direction"]');
+    return flexDiv || sec;
+  }
+
+  function getThreadId(container: HTMLElement): string {
+    const a = container.querySelector<HTMLAnchorElement>('a[href*="showthread.php?t="]');
+    if (a) {
+      const m = a.href.match(/t=(\d+)/);
+      if (m) return m[1];
+    }
+    return container.id || container.className || '';
+  }
+
   return {
     theme: 'desktop-v2' as Theme,
     getThreadContainer,
@@ -540,5 +607,7 @@ function createDesktopV2Adapter(): DomAdapter {
     getLinkRow,
     getSeparator,
     getOPAuthor,
+    getThreadListParent,
+    getThreadId,
   };
 }

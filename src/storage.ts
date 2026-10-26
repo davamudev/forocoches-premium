@@ -62,6 +62,7 @@ export interface FCConfig {
   poleMessage?: string;
   poleSearchPages?: boolean;
   blockAds?: boolean;
+  threadsPerPage?: number;
 }
 
 const CONFIG_STRING_KEYS = ['highlightZeroMessagesColor', 'highlightOPColor', 'poleMessage'];

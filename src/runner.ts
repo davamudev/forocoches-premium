@@ -6,6 +6,7 @@ import { hideAds } from './hide-ads';
 import { findThreads } from './threads';
 import { injectPostNotes, injectProfileNote } from './user-notes';
 import { QUICK_REPLY_SELECTOR } from './selectors';
+import { enhancePagination } from './pagination';
 let lastLogKey = '';
 
 function handlePole(): void {
@@ -118,7 +119,7 @@ export function run(): void {
       log('RUN', 'showthread', 'Ignorados: ' + users.length, 'Palabras: ' + words.length);
     }
   }
-  if (path.indexOf('forumdisplay.php') !== -1) { hideThreads(users, words); handlePoleSearch(); }
+  if (path.indexOf('forumdisplay.php') !== -1) { enhancePagination(); hideThreads(users, words); handlePoleSearch(); }
   else if (path.indexOf('showthread.php') !== -1) { hidePosts(users); addIgnorePostButtons(); highlightOPPosts(); injectPostNotes(); handlePole(); }
   else if (path.indexOf('member.php') !== -1) { injectProfileNote(); }
 }

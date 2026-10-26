@@ -18,6 +18,7 @@ import {
   getPoleSearchPages, setPoleSearchPages,
   getPoleMessage, setPoleMessage,
   getBlockAds, setBlockAds,
+  getThreadsPerPage, setThreadsPerPage,
 } from '../config';
 import { exportData, importData } from '../storage';
 import { STYLE } from './styles';
@@ -101,6 +102,33 @@ export function buildConfigTab(content: HTMLElement): void {
   addSectionHeader(content, 'Hilos');
   addOption(content, 'Auto-minimizar al guardar palabras', 'Al guardar palabras clave, el panel se cierra solo.', getAutoMinimizeWords, setAutoMinimizeWords);
   addOption(content, 'Ocultar hilos por autor', 'Oculta hilos cuyo creador est\u00E9 en tu lista de ignorados. No funciona en Mobile-v1 (móvil antiguo).', getHideThreadByAuthor, setHideThreadByAuthor);
+
+  // Threads per page select
+  const tppRow = document.createElement('div');
+  tppRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 0;';
+  const tppLbl = document.createElement('span');
+  tppLbl.textContent = 'Hilos por p\u00E1gina';
+  tppLbl.style.cssText = 'font-size:13px;color:#333;flex:1;';
+  tppRow.appendChild(tppLbl);
+  const tppSelect = document.createElement('select');
+  tppSelect.style.cssText = 'padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;';
+  [40, 80, 120, 160].forEach((n) => {
+    const opt = document.createElement('option');
+    opt.value = String(n);
+    opt.textContent = String(n);
+    if (n === getThreadsPerPage()) opt.selected = true;
+    tppSelect.appendChild(opt);
+  });
+  tppSelect.addEventListener('change', () => {
+    setThreadsPerPage(parseInt(tppSelect.value, 10));
+    toast('Hilos por p\u00E1gina: ' + tppSelect.value + '. Recarga para aplicar.');
+  });
+  tppRow.appendChild(tppSelect);
+  content.appendChild(tppRow);
+  const tppDesc = document.createElement('div');
+  tppDesc.textContent = 'Carga hilos de p\u00E1ginas siguientes para mostrar m\u00E1s por p\u00E1gina (requiere recarga).';
+  tppDesc.style.cssText = 'font-size:11px;color:#999;margin:-2px 0 6px 0;';
+  content.appendChild(tppDesc);
 
   // ---- RESALTADOS ----
   addSectionHeader(content, 'Resaltados');
