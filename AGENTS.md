@@ -18,6 +18,8 @@ npm run dev            # vite build --watch (no dev server)
 
 No linter, formatter. CI (`.github/workflows/ci.yml`): `npm ci` → typecheck → test → build.
 
+Release: on develop bump `package.json` version (`npm version X.Y.Z --no-git-tag-version`) + add `## [X.Y.Z] - date` section to `CHANGELOG.md`. Merge to `master` → `.github/workflows/release.yml` tags `vX.Y.Z`, publishes GitHub release with `dist/forocoches-premium.user.js` + changelog section. Version already tagged → skip.
+
 ## Tests
 
 Vitest + jsdom, `test/*.test.ts`. Env `node`; `test/helpers.ts` makes own JSDOM per `setupDom(html, url)` from `dom/` fixtures, sets globals.
