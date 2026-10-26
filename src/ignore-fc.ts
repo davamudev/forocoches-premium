@@ -15,18 +15,20 @@ import {
 //  SYNC IGNORED LIST FROM FOROCOCHES
 // ============================================================
 
-export async function syncIgnored(): Promise<void> {
+// Merges FC's list into the local one; never drops local users (a failed FC add
+// or a bad response must not wipe them). Removals go through removeFromFCIgnore.
+export async function syncIgnored(silent = false): Promise<void> {
   const forumUsers = await fetchIgnoreList();
-  if (forumUsers.length > 0) {
-    saveUsers(forumUsers.slice());
-    toast(`Sincronizado: ${forumUsers.length} usuarios`);
-    run();
-    updatePanelList();
-  } else {
-    saveUsers([]);
-    run();
-    updatePanelList();
+  if (forumUsers === null) {
+    if (!silent) toast('No se pudo sincronizar con FC (¿sesion caducada?)', 5000);
+    return;
   }
+  const local = getUsers();
+  const added = forumUsers.filter((u) => local.indexOf(u) === -1);
+  if (added.length > 0) saveUsers(local.concat(added));
+  if (!silent || added.length > 0) toast(`Sincronizado: ${local.length + added.length} usuarios (${added.length} nuevos)`);
+  run();
+  updatePanelList();
 }
 
 export function openFCIgnoreList(): void {
